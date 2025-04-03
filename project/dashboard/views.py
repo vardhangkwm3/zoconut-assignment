@@ -27,11 +27,12 @@ def dashboard(request):
 
 @login_required
 def add_client(request):
-    if request.method == 'POST' and request.is_ajax():
+    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         form = ClientForm(request.POST)
         if form.is_valid():
             form.save()
             return JsonResponse({'message': 'Client added successfully'})
         else:
             return JsonResponse({'errors': form.errors}, status=400)
+    
     return HttpResponseBadRequest("Invalid request")
