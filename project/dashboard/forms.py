@@ -1,27 +1,29 @@
 from django import forms
 from django.contrib.auth.models import User
-from .models import Profile
+from .models import ClientProfile
 
 class ClientForm(forms.ModelForm):
-    username = forms.CharField()
-    password = forms.CharField(widget=forms.PasswordInput)
-    first_name = forms.CharField(required=False)
-    last_name = forms.CharField(required=False)
-    primary_number = forms.CharField(max_length=20)
-    country_code = forms.CharField(max_length=5)
+    # Form fields for both User and ClientProfile
+    username = forms.CharField(max_length=150)
+    first_name = forms.CharField(max_length=150)
+    last_name = forms.CharField(max_length=150)
+    email = forms.EmailField()
 
     class Meta:
-        model = User
-        fields = ('username', 'password', 'first_name', 'last_name')
+        model = ClientProfile
+        fields = ['primary_number', 'country_code']
 
     def save(self, commit=True):
-        user = super(ClientForm, self).save(commit=False)
-        user.set_password(self.cleaned_data["password"])
+        # Create a new User instance first.
+        user_data = {
+            'username': self.cleaned_data['username'],
+            'first_name': self.cleaned_data['first_name'],
+            'last_name': self.cleaned_data['last_name'],
+            'email': self.cleaned_data['email'],
+        }
+        user = User.objects.create(**user_data)
+        client_profile = super().save(commit=False)
+        client_profile.user = user
         if commit:
-            user.save()
-            Profile.objects.create(
-                user=user,
-                primary_number=self.cleaned_data['primary_number'],
-                country_code=self.cleaned_data['country_code']
-            )
-        return user
+            client_profile.save()
+        return client_profile
