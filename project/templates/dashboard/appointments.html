@@ -1,0 +1,75 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Appointments{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Appointments</h1>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Client</th>
+            <th>Date &amp; Time</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for appointment in appointments %}
+        <tr data-id="{{ appointment.id }}">
+            <td>{{ appointment.client.user.get_full_name }}</td>
+            <td>{{ appointment.appointment_datetime|date:"Y-m-d H:i" }}</td>
+            <td class="status">{{ appointment.get_status_display }}</td>
+            <td>
+                <!-- A dropdown to change status -->
+                <select class="form-control status-select" data-id="{{ appointment.id }}">
+                    {% for key, value in appointment.STATUS_CHOICES %}
+                    <option value="{{ key }}" {% if appointment.status == key %}selected{% endif %}>
+                        {{ value }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No appointments found in the last 2 months.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Attach a change event to status dropdowns
+    document.querySelectorAll('.status-select').forEach(function(select) {
+        select.addEventListener('change', function() {
+            const appointmentId = this.getAttribute('data-id');
+            const newStatus = this.value;
+            const csrfToken = '{{ csrf_token }}';
+            fetch("{% url 'dashboard:update_appointment' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({
+                    'appointment_id': appointmentId,
+                    'status': newStatus
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    // Update the status in the table if needed
+                    const row = document.querySelector('tr[data-id="'+ appointmentId +'"]');
+                    row.querySelector('.status').innerText = data.new_status.charAt(0).toUpperCase() + data.new_status.slice(1);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    });
+</script>
+{% endblock %}
