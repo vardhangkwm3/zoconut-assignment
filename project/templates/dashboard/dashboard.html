@@ -1,64 +1,120 @@
-{% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Dashboard-Header{% endblock %}
+
 {% block content %}
-<h1>Dashboard</h1>
-<div class="row">
+<h1 class="mb-4">Dashboard</h1>
+
+<!-- Stats Overview -->
+<div class="row mb-4">
     <div class="col-md-6">
-        <h3>Stats Overview</h3>
-        <p>New Clients (Last 2 Months): <strong>{{ new_clients_count }}</strong></p>
-        <p>New Appointments (Last 2 Months): <strong>{{ new_appointments_count }}</strong></p>
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">New Clients (Last 2 Months)</h5>
+                <p class="card-text">{{ new_clients_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">New Appointments (Last 2 Months)</h5>
+                <p class="card-text">{{ new_appointments_count }}</p>
+            </div>
+        </div>
     </div>
 </div>
-<hr>
-<div class="row">
-    <div class="col-md-12">
-        <h3>Clients (Last 2 Months)</h3>
-        <button class="btn btn-primary" data-toggle="modal" data-target="#addClientModal">Add New Client</button>
-        <table class="table table-bordered mt-3">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Primary Number</th>
-                    <th>Country Code</th>
-                    <th>Joined On</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for client in clients %}
-                <tr>
-                    <td>{{ client.user.get_full_name|default:client.user.username }}</td>
-                    <td>{{ client.primary_number }}</td>
-                    <td>{{ client.country_code }}</td>
-                    <td>{{ client.timestamp|date:"Y-m-d" }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+
+<!-- Clients Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Clients (Last 2 Months)</span>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-primary mx-2" data-toggle="modal" data-target="#addClientModal">
+                Add New Client
+            </button>
+            <a class="btn btn-info" href="{% url 'dashboard:appointments' %}">
+                View Appointments
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        {% include 'dashboard/client.html' %}
     </div>
 </div>
-{% include "dashboard/add_client_modal.html" %}
+
+
+<!-- Add Client Modal -->
+<div class="modal fade" id="addClientModal" tabindex="-1" role="dialog" aria-labelledby="addClientModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <form id="addClientForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addClientModalLabel">Add New Client</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <!-- Fields for User and ClientProfile -->
+          <div class="form-group">
+            <label for="id_username">Username</label>
+            <input type="text" name="username" class="form-control" id="id_username" required>
+          </div>
+          <div class="form-group">
+            <label for="id_first_name">First Name</label>
+            <input type="text" name="first_name" class="form-control" id="id_first_name" required>
+          </div>
+          <div class="form-group">
+            <label for="id_last_name">Last Name</label>
+            <input type="text" name="last_name" class="form-control" id="id_last_name" required>
+          </div>
+          <div class="form-group">
+            <label for="id_email">Email</label>
+            <input type="email" name="email" class="form-control" id="id_email" required>
+          </div>
+          <div class="form-group">
+            <label for="id_primary_number">Primary Number</label>
+            <input type="text" name="primary_number" class="form-control" id="id_primary_number" required>
+          </div>
+          <div class="form-group">
+            <label for="id_country_code">Country Code</label>
+            <input type="text" name="country_code" class="form-control" id="id_country_code" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Add Client</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}
+
 {% block extra_js %}
 <script>
-$(document).ready(function(){
-    $('#clientForm').on('submit', function(e){
+    // AJAX submission for the add client form.
+    document.getElementById('addClientForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        $.ajax({
-            url: "{% url 'add_client' %}",
-            method: "POST",
-            data: $(this).serialize(),
+        const formData = new FormData(this);
+        fetch("{% url 'dashboard:add_client' %}", {
+            method: 'POST',
             headers: {
-                'X-CSRFToken': '{{ csrf_token }}'
+                'X-CSRFToken': '{{ csrf_token }}',
             },
-            success: function(response){
-                alert(response.message);
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                // On success, reload the page or update the table dynamically.
                 location.reload();
-            },
-            error: function(xhr){
-                alert("Error: " + JSON.stringify(xhr.responseJSON.errors));
+            } else {
+                alert('Error adding client.');
             }
-        });
+        })
+        .catch(error => console.error('Error:', error));
     });
-});
 </script>
 {% endblock %}
